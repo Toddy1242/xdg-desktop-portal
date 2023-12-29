@@ -66,6 +66,7 @@ src_includes = include_directories('src')
 i18n = import('i18n')
 gnome = import('gnome')
 pkgconfig = import('pkgconfig')
+pymod = import('python')
 
 cc = meson.get_compiler('c')
 cflags = [
@@ -116,10 +117,9 @@ pipewire_dep = dependency('libpipewire-0.3', version: '>= 0.2.90')
 libsystemd_dep = dependency('libsystemd', required: get_option('systemd'))
 
 
-use_bwrap = get_option('sandboxed-image-validation')
-bwrap = find_program('bwrap', required: use_bwrap)
+bwrap = find_program('bwrap', required: get_option('sandboxed-image-validation'))
 
-if not use_bwrap
+if not bwrap.found()
   warning('''
     Sandboxed image validation with Bubblewrap is DISABLED.
     If your system can run Bubblewrap, it's **hightly** recommended that you enable this
@@ -146,14 +146,16 @@ endif
 
 add_project_arguments(['-DGLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_2_66'], language: 'c')
 
-build_docbook = false
-xmlto = find_program('xmlto', required: get_option('docbook-docs'))
-if xmlto.found()
+build_documentation = false
+gdbus_codegen = find_program('gdbus-codegen', native: true, required: get_option('documentation'))
+sphinx_build = find_program('sphinx-build', native: true, required: get_option('documentation'))
+sphinx_modules = pymod.find_installation('python3', modules: ['sphinxext.opengraph', 'sphinx_copybutton', 'furo'], required: get_option('documentation'))
+if not get_option('documentation').disabled() and gdbus_codegen.found() and sphinx_build.found() and sphinx_modules.found()
     fs = import('fs')
     # we're going to copy this file in to our build tree
     if fs.is_file(flatpak_intf_dir / 'org.freedesktop.portal.Flatpak.xml')
-        build_docbook = true
-    elif get_option('docbook-docs').enabled()
+        build_documentation = true
+    elif get_option('documentation').enabled()
         error('Flatpak development files are required to build DocBook docs')
     endif
 endif
@@ -196,15 +198,15 @@ subdir('doc')
 configure_file(output: 'config.h', configuration: config_h)
 
 summary({
-    'Enable docbook documentation': build_docbook,
+    'Enable documentation': build_documentation,
     'Enable libsystemd support': have_libsystemd,
     'Enable geoclue support': have_geoclue,
     'Enable libportal support': have_libportal,
     'Enable installed tests:': enable_installed_tests,
     'Enable python test suite': enable_pytest,
     'Build man pages': rst2man.found(),
-    'Build flatpak interfaces': flatpak_dep.found(),
-    'Sandboxed image validation': use_bwrap,
+    'Build flatpak interfaces': flatpak_intf_dir != '',
+    'Sandboxed image validation': bwrap.found(),
   },
   section: 'Optional builds',
   bool_yn: true,

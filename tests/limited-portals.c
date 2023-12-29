@@ -102,8 +102,7 @@ update_data_dirs (void)
 {
   const char *data_dirs;
   gssize len = 0;
-  GString *str;
-  char *new_val;
+  g_autoptr(GString) str = NULL;
 
   data_dirs = g_getenv ("XDG_DATA_DIRS");
   if (data_dirs != NULL &&
@@ -123,11 +122,9 @@ update_data_dirs (void)
   if (str->len > 0)
     g_string_append_c (str, ':');
   g_string_append (str, "/usr/local/share/:/usr/share/");
-  new_val = g_string_free (str, FALSE);
 
-  g_debug ("Setting XDG_DATA_DIRS to %s", new_val);
-  g_setenv ("XDG_DATA_DIRS", new_val, TRUE);
-  /* new_val is leaked */
+  g_debug ("Setting XDG_DATA_DIRS to %s", str->str);
+  g_setenv ("XDG_DATA_DIRS", str->str, TRUE);
 }
 
 static void
@@ -276,6 +273,8 @@ global_setup (void)
   g_subprocess_launcher_setenv (launcher, "XDG_DATA_HOME", outdir, TRUE);
   g_subprocess_launcher_setenv (launcher, "PATH", g_getenv ("PATH"), TRUE);
   g_subprocess_launcher_take_stdout_fd (launcher, xdup (STDERR_FILENO));
+
+  g_clear_pointer (&argv0, g_free);
 
   if (g_getenv ("XDP_UNINSTALLED") != NULL)
     argv0 = g_test_build_filename (G_TEST_BUILT, "..", XDG_DP_BUILDDIR, "xdg-desktop-portal", NULL);
@@ -444,6 +443,9 @@ int
 main (int argc, char **argv)
 {
   int res;
+
+  /* Better leak reporting without gvfs */
+  g_setenv ("GIO_USE_VFS", "local", TRUE);
 
   g_log_writer_default_set_use_stderr (TRUE);
 

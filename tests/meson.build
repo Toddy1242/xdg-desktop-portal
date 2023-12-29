@@ -177,6 +177,7 @@ portal_tests = [
   'print',
   'savefile',
   'screenshot',
+  'settings',
   'trash',
   'wallpaper',
   'webextensions',
@@ -191,7 +192,6 @@ foreach p : portal_tests
       args: ['--verbose', '--keep-going', '--tap', '-p', '/portal/@0@'.format(p)],
       depends: [test_backends, test_portals],
       env: test_env,
-      is_parallel: false,
       protocol: test_protocol,
       suite: 'portals',
     )
@@ -214,7 +214,6 @@ foreach p : portal_limited
       args: ['--verbose', '--keep-going', '--tap', '-p', '/limited/@0@'.format(p)],
       depends: [test_backends, limited_portals],
       env: limited_env,
-      is_parallel: false,
       protocol: test_protocol,
       suite: 'portals',
     )
@@ -286,7 +285,6 @@ test(
 )
 
 pytest = find_program('pytest-3', 'pytest', required: get_option('pytest'))
-pymod = import('python')
 python = pymod.find_installation(
   'python3',
   modules: ['dbus', 'dbusmock', 'gi'],

@@ -15,53 +15,51 @@ jobs:
   build:
     runs-on: ubuntu-20.04
     container:
-      image: ubuntu:22.04
+      image: fedora:latest
     steps:
       - name: Install dependencies
-        env:
-          DEBIAN_FRONTEND: noninteractive
         run: |
-          apt-get update
-          apt-get upgrade -y
-          apt-get install -y --no-install-recommends \
+          dnf install -y \
             desktop-file-utils \
+            flatpak-devel \
+            fontconfig-devel \
             fuse3 \
+            fuse3-devel \
             gcc \
+            gdk-pixbuf2-devel \
+            geoclue2-devel \
             gettext \
+            glib2-devel \
             gnome-desktop-testing \
-            gtk-doc-tools \
-            libcap2-bin \
-            libflatpak-dev \
-            libfontconfig1-dev \
-            libfuse3-dev \
-            libgdk-pixbuf-2.0-dev \
-            libgeoclue-2-dev \
-            libglib2.0-dev \
-            libjson-glib-dev \
-            libpipewire-0.3-dev \
-            libportal-dev \
-            libsystemd-dev \
+            gtk-doc \
+            json-glib-devel \
+            libcap \
+            libcap-devel \
+            libportal-devel \
             llvm \
             meson \
-            python3-gi \
-            shared-mime-info
+            pipewire-devel \
+            python3-gobject \
+            shared-mime-info \
+            systemd-devel
 
       - name: Install dependencies for doc builds
-        env:
-          DEBIAN_FRONTEND: noninteractive
         run: |
-          apt-get install -y --no-install-recommends \
+          dnf install -y \
             ca-certificates \
             git \
-            xmlto
+            python-sphinx-copybutton \
+            python-sphinxext-opengraph \
+            python3-furo \
+            python3-sphinx
 
       - name: Check out xdg-desktop-portal
         uses: actions/checkout@v3
 
       - name: Build docs
         run: |
-          meson setup builddir -Ddocbook-docs=enabled
-          meson compile -C builddir
+          meson setup builddir -Ddocumentation=enabled
+          ninja -C builddir doc/html
 
       - name: Build website
         uses: actions/jekyll-build-pages@v1
@@ -72,10 +70,7 @@ jobs:
       - name: Prepare docs
         working-directory: builddir/doc
         run: |
-          mkdir ../../_site/docs/
-          mv portal-docs.html ../../_site/docs/index.html
-          mv redirect.html ../../_site/docs/portal-docs.html
-          mv docbook.css ../../_site/docs/
+          mv ./html ../../_site/docs
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2

@@ -76,7 +76,7 @@ send_response_in_thread_func (GTask        *task,
   guint response;
   GVariant *options;
   DocumentFlags flags = DOCUMENT_FLAG_WRITABLE | DOCUMENT_FLAG_DIRECTORY;
-  const char **uris;
+  g_autofree char **uris = NULL;
   GVariant *choices;
   GVariant *current_filter;
   GVariant *writable;
@@ -571,7 +571,7 @@ handle_open_file (XdpDbusFileChooser *object,
 
   impl_request =
     xdp_dbus_impl_request_proxy_new_sync (g_dbus_proxy_get_connection (G_DBUS_PROXY (impl)),
-                                          G_DBUS_PROXY_FLAGS_NONE,
+                                          G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES,
                                           g_dbus_proxy_get_name (G_DBUS_PROXY (impl)),
                                           request->id,
                                           NULL, &error);
@@ -737,7 +737,7 @@ handle_save_file (XdpDbusFileChooser *object,
 
   impl_request =
     xdp_dbus_impl_request_proxy_new_sync (g_dbus_proxy_get_connection (G_DBUS_PROXY (impl)),
-                                          G_DBUS_PROXY_FLAGS_NONE,
+                                          G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES,
                                           g_dbus_proxy_get_name (G_DBUS_PROXY (impl)),
                                           request->id,
                                           NULL, &error);
@@ -842,7 +842,7 @@ handle_save_files (XdpDbusFileChooser *object,
 
   impl_request =
     xdp_dbus_impl_request_proxy_new_sync (g_dbus_proxy_get_connection (G_DBUS_PROXY (impl)),
-                                          G_DBUS_PROXY_FLAGS_NONE,
+                                          G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES,
                                           g_dbus_proxy_get_name (G_DBUS_PROXY (impl)),
                                           request->id,
                                           NULL, &error);

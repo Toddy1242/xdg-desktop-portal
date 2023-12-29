@@ -16,7 +16,7 @@ impl_built_sources = gnome.gdbus_codegen(
   docbook: 'portal',
   autocleanup: 'none',
 )
-background_monitor_sources = gnome.gdbus_codegen(
+background_monitor_built_sources = gnome.gdbus_codegen(
   'xdp-background-dbus',
   sources: background_monitor_sources,
   interface_prefix: 'org.freedesktop.background',
@@ -104,7 +104,7 @@ xdg_desktop_portal_sources += [
   xdp_method_info_sources,
   portal_built_sources,
   impl_built_sources,
-  background_monitor_sources,
+  background_monitor_built_sources,
   geoclue_built_sources,
   built_resources,
 ]
@@ -163,19 +163,16 @@ configure_file(
   install_dir: dbus_service_dir,
 )
 
-helper_def = ''
+validate_icon_c_args = ['-D_GNU_SOURCE=1']
 if bwrap.found()
-  helper_def = '-DHELPER="@0@"'.format(bwrap.full_path())
+  validate_icon_c_args += '-DHELPER="@0@"'.format(bwrap.full_path())
 endif
 
 executable(
   'xdg-desktop-portal-validate-icon',
   'validate-icon.c',
   dependencies: [gdk_pixbuf_dep],
-  c_args: [
-      '-D_GNU_SOURCE=1',
-      helper_def
-  ],
+  c_args: validate_icon_c_args,
   install: true,
   install_dir: libexecdir,
 )

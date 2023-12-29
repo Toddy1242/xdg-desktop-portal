@@ -102,8 +102,7 @@ update_data_dirs (void)
 {
   const char *data_dirs;
   gssize len = 0;
-  GString *str;
-  char *new_val;
+  g_autoptr(GString) str = NULL;
 
   data_dirs = g_getenv ("XDG_DATA_DIRS");
   if (data_dirs != NULL &&
@@ -123,11 +122,9 @@ update_data_dirs (void)
   if (str->len > 0)
     g_string_append_c (str, ':');
   g_string_append (str, "/usr/local/share/:/usr/share/");
-  new_val = g_string_free (str, FALSE);
 
-  g_debug ("Setting XDG_DATA_DIRS to %s", new_val);
-  g_setenv ("XDG_DATA_DIRS", new_val, TRUE);
-  /* new_val is leaked */
+  g_debug ("Setting XDG_DATA_DIRS to %s", str->str);
+  g_setenv ("XDG_DATA_DIRS", str->str, TRUE);
 }
 
 static void
@@ -153,6 +150,7 @@ global_setup (void)
   g_mkdtemp (outdir);
   g_debug ("outdir: %s\n", outdir);
 
+  g_setenv ("HOME", outdir, TRUE);
   g_setenv ("XDG_CURRENT_DESKTOP", "test", TRUE);
   g_setenv ("XDG_RUNTIME_DIR", outdir, TRUE);
   g_setenv ("XDG_DATA_HOME", outdir, TRUE);
@@ -173,6 +171,20 @@ global_setup (void)
 
   session_bus = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, &error);
   g_assert_no_error (error);
+
+  if (g_getenv ("XDP_DBUS_MONITOR"))
+    {
+      launcher = g_subprocess_launcher_new (G_SUBPROCESS_FLAGS_NONE);
+      g_subprocess_launcher_setenv (launcher, "DBUS_SESSION_BUS_ADDRESS", g_test_dbus_get_bus_address (dbus), TRUE);
+      g_subprocess_launcher_take_stdout_fd (launcher, xdup (STDERR_FILENO));
+      argv[0] = "dbus-monitor";
+      argv[1] = NULL;
+      subprocess = g_subprocess_launcher_spawnv (launcher, argv, &error);
+      g_assert_no_error (error);
+      g_test_message ("Launched %s with pid %s\n", argv[0],
+                      g_subprocess_get_identifier (subprocess));
+      test_procs = g_list_append (test_procs, g_steal_pointer (&subprocess));
+    }
 
   /* start portal backends */
   name_appeared = FALSE;
@@ -280,6 +292,8 @@ global_setup (void)
   g_subprocess_launcher_setenv (launcher, "PATH", g_getenv ("PATH"), TRUE);
   g_subprocess_launcher_take_stdout_fd (launcher, xdup (STDERR_FILENO));
 
+  g_clear_pointer (&argv0, g_free);
+
   if (g_getenv ("XDP_UNINSTALLED") != NULL)
     argv0 = g_test_build_filename (G_TEST_BUILT, "..", XDG_DP_BUILDDIR, "xdg-desktop-portal", NULL);
   else
@@ -296,7 +310,6 @@ global_setup (void)
   g_test_message ("Launched %s with pid %s\n", argv[0],
                   g_subprocess_get_identifier (subprocess));
   test_procs = g_list_append (test_procs, g_steal_pointer (&subprocess));
-  g_clear_pointer (&argv0, g_free);
 
   name_timeout = g_timeout_add (1000 * timeout_mult, timeout_cb, "Failed to launch xdg-desktop-portal");
 
@@ -439,7 +452,7 @@ DEFINE_TEST_EXISTS(open_uri, OPEN_URI, 3)
 DEFINE_TEST_EXISTS(print, PRINT, 2)
 DEFINE_TEST_EXISTS(proxy_resolver, PROXY_RESOLVER, 1)
 DEFINE_TEST_EXISTS(screenshot, SCREENSHOT, 2)
-DEFINE_TEST_EXISTS(settings, SETTINGS, 1)
+DEFINE_TEST_EXISTS(settings, SETTINGS, 2)
 DEFINE_TEST_EXISTS(trash, TRASH, 1)
 DEFINE_TEST_EXISTS(wallpaper, WALLPAPER, 1)
 DEFINE_TEST_EXISTS(realtime, REALTIME, 1)
@@ -448,6 +461,9 @@ int
 main (int argc, char **argv)
 {
   int res;
+
+  /* Better leak reporting without gvfs */
+  g_setenv ("GIO_USE_VFS", "local", TRUE);
 
   g_log_writer_default_set_use_stderr (TRUE);
 
